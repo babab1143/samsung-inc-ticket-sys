@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+    <http:listener-config name="samsung-inc-ticket-sys-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="samsung-inc-ticket-sys-config" api="resource::ad1a541b-0f78-468d-8fc8-821491f7f476:samsung-inc-ticket-sys:2.0.1:raml:zip:samsung-inc-ticket-sys.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <db:config name="Database_Config" doc:name="Database Config" doc:id="0dced2b8-ff19-4805-9595-3f5533075c90" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="Password@911" database="smg_incident"/>
+	</db:config>
+	<flow name="samsung-inc-ticket-sys-main">
+        <http:listener config-ref="samsung-inc-ticket-sys-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="samsung-inc-ticket-sys-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="samsung-inc-ticket-sys-console">
+        <http:listener config-ref="samsung-inc-ticket-sys-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="samsung-inc-ticket-sys-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="put:\updateTicket:application\json:samsung-inc-ticket-sys-config">
+        <set-variable value="#[payload.id]" doc:name="Set Variable" doc:id="a00f88a8-1971-4dbf-9c8b-6b248b15d868" variableName="idData"/>
+		<db:update doc:name="Update" doc:id="9285d628-caf5-447d-874c-35e5914f2e3d" config-ref="Database_Config">
+			<db:sql ><![CDATA[update incidents set details=:xyz where incId=:id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id:payload.id,
+	xyz:payload.details
+}]]]></db:input-parameters>
+		</db:update>
+		<ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  id: vars.idData,
+  status: "Ticket upadted sucess."
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="delete:\DeleteTicket:samsung-inc-ticket-sys-config">
+        <set-variable value="#[attributes.queryParams.inc]" doc:name="Set Variable" doc:id="b757f8be-1ae2-43c5-b230-ac4cd6852ee4" variableName="inc"/>
+		<db:delete doc:name="Delete" doc:id="877f0315-fae5-44df-847d-3fc8df773857" config-ref="Database_Config">
+			<db:sql ><![CDATA[delete from incidents where incId=:id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id:attributes.queryParams.inc
+}]]]></db:input-parameters>
+		</db:delete>
+		<ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  id: vars.inc,
+  status: "Ticket deleted sucessfully."
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\fetchTickets:samsung-inc-ticket-sys-config">
+        <db:select doc:name="Select" doc:id="d43bc453-15b7-4bd8-b662-391c8d5174e1" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from incidents where incId= :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id:attributes.queryParams.inc
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+  payload
+]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\raiseTicket:application\json:samsung-inc-ticket-sys-config">
+        <set-variable value='#["INC" ++ randomINC(10000)]' doc:name="Set Variable" doc:id="a43315c8-74ce-4149-820d-3ab26ca9efa5" variableName="id"/>
+		<db:insert doc:name="Insert" doc:id="30cfd487-85c5-473c-a2b1-20a4bcd9dabe" config-ref="Database_Config">
+			<db:sql ><![CDATA[insert into incidents values(:incId, :user,:reqtype,:details)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	incId: vars.id,
+	user: payload.user,
+	reqtype: payload.reqtype,
+	details: payload.details
+}]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  id: vars.id,
+  status: "Ticket created successfully."
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+</mule>
